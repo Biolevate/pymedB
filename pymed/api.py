@@ -4,7 +4,7 @@ import itertools
 
 import xml.etree.ElementTree as xml
 
-from typing import Union
+from typing import Union, Optional
 
 from .helpers import batches
 from .article import PubMedArticle
@@ -156,7 +156,7 @@ class PubMed(object):
         else:
             return response.text
 
-    def _getArticles(self, article_ids: list) -> list:
+    def _getArticles(self, article_ids: list):
         """ Helper method that batches a list of article IDs and retrieves the content.
 
             Parameters:
@@ -184,7 +184,7 @@ class PubMed(object):
         for book in root.iter("PubmedBookArticle"):
             yield PubMedBookArticle(xml_element=book)
 
-    def _getArticlesSummaries(self, article_ids: list[str]) -> list[ArticleSummary]:
+    def _getArticlesSummaries(self, article_ids: list[str]):
         """ Helper method to retrieve the article summaries for an ids list.
 
             Parameters:
@@ -210,7 +210,7 @@ class PubMed(object):
 
 
 
-    def _getArticleIds(self, query: str, max_results: int) -> list:
+    def _getArticleIds(self, query: str, max_results: int) -> list[str]:
         """ Helper method to retrieve the article IDs for a query.
 
             Parameters:
