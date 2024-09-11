@@ -9,7 +9,7 @@ from typing import Union
 from .helpers import batches
 from .article import PubMedArticle
 from .book import PubMedBookArticle
-
+from .summary import ArticleSummary
 
 # Base url for all queries
 BASE_URL = "https://eutils.ncbi.nlm.nih.gov"
@@ -20,7 +20,11 @@ class PubMed(object):
     """
 
     def __init__(
-        self: object, tool: str = "my_tool", email: str = "my_email@example.com"
+        self,
+        tool: str = "my_tool",
+        email: str = "my_email@example.com",
+        db: str = "pubmed",
+        api_key: Optional[str] = None
     ) -> None:
         """ Initialization of the object.
 
@@ -44,9 +48,10 @@ class PubMed(object):
         self._requestsMade = []
 
         # Define the standard / default query parameters
-        self.parameters = {"tool": tool, "email": email, "db": "pubmed"}
+        self.parameters = {"tool": tool, "email": email, "db": db}
+        if not api_key is None: self.parameters['api_key'] = api_key
 
-    def query(self: object, query: str, max_results: int = 100):
+    def query(self, query: str, max_results: int = 100):
         """ Method that executes a query agains the GraphQL schema, automatically
             inserting the PubMed data loader.
 
@@ -72,7 +77,7 @@ class PubMed(object):
         # Chain the batches back together and return the list
         return itertools.chain.from_iterable(articles)
 
-    def getTotalResultsCount(self: object, query: str) -> int:
+    def getTotalResultsCount(self, query: str) -> int:
         """ Helper method that returns the total number of results that match the query.
 
             Parameters:
@@ -112,7 +117,7 @@ class PubMed(object):
         return len(self._requestsMade) > self._rateLimit
 
     def _get(
-        self: object, url: str, parameters: dict, output: str = "json"
+        self, url: str, parameters: dict, output: str = "json"
     ) -> Union[dict, str]:
         """ Generic helper method that makes a request to PubMed.
 
@@ -151,7 +156,7 @@ class PubMed(object):
         else:
             return response.text
 
-    def _getArticles(self: object, article_ids: list) -> list:
+    def _getArticles(self, article_ids: list) -> list:
         """ Helper method that batches a list of article IDs and retrieves the content.
 
             Parameters:
@@ -179,7 +184,33 @@ class PubMed(object):
         for book in root.iter("PubmedBookArticle"):
             yield PubMedBookArticle(xml_element=book)
 
-    def _getArticleIds(self: object, query: str, max_results: int) -> list:
+    def _getArticlesSummaries(self, article_ids: list[str]) -> list[ArticleSummary]:
+        """ Helper method to retrieve the article summaries for an ids list.
+
+            Parameters:
+                - article_ids                 List[Str], list of article ids.
+
+            Returns:
+                - articles_summaries   List[ArticleSummary], list of article summaries.
+        """
+
+        # Get the default parameters
+        parameters = self.parameters.copy()
+        parameters["id"] = article_ids
+
+        # Make the request
+        response = self._get(
+            url="/entrez/eutils/esummary.fcgi", parameters=parameters, output="xml"
+        )
+
+        root = xml.fromstring(response)
+        
+        for docsum in root.findall('DocSum'):
+            yield ArticleSummary.from_xml(docsum=docsum)
+
+
+
+    def _getArticleIds(self, query: str, max_results: int) -> list:
         """ Helper method to retrieve the article IDs for a query.
 
             Parameters:
