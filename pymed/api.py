@@ -13,6 +13,14 @@ from .summary import ArticleSummary
 
 # Base url for all queries
 BASE_URL = "https://eutils.ncbi.nlm.nih.gov"
+# /pmc/utils/oa/oa.fcgi
+
+def extract_xml(data: str):
+  try:
+    return xml.fromstring(data)
+  except Exception:
+    return None
+  
 
 
 class PubMed(object):
@@ -64,12 +72,12 @@ class PubMed(object):
         """
 
         # Retrieve the article IDs for the query
-        article_ids = self._getArticleIds(query=query, max_results=max_results)
+        article_ids = self._get_article_ids(query=query, max_results=max_results)
 
         # Get the articles themselves
         articles = list(
             [
-                self._getArticles(article_ids=batch)
+                self._get_articles(article_ids=batch)
                 for batch in batches(article_ids, 250)
             ]
         )
@@ -77,7 +85,7 @@ class PubMed(object):
         # Chain the batches back together and return the list
         return itertools.chain.from_iterable(articles)
 
-    def getTotalResultsCount(self, query: str) -> int:
+    def get_total_results_count(self, query: str) -> int:
         """ Helper method that returns the total number of results that match the query.
 
             Parameters:
@@ -103,7 +111,7 @@ class PubMed(object):
         # Return the total number of results (without retrieving them)
         return total_results_count
     
-    def _exceededRateLimit(self) -> bool:
+    def _exceeded_rate_limit(self) -> bool:
         """ Helper method to check if we've exceeded the rate limit.
 
             Returns:
@@ -135,7 +143,7 @@ class PubMed(object):
         """
 
         # Make sure the rate limit is not exceeded
-        while self._exceededRateLimit():
+        while self._exceeded_rate_limit():
             pass
 
         # Set the response mode
@@ -156,7 +164,7 @@ class PubMed(object):
         else:
             return response.text
 
-    def _getArticles(self, article_ids: list):
+    def _get_articles(self, article_ids: list):
         """ Helper method that batches a list of article IDs and retrieves the content.
 
             Parameters:
@@ -184,7 +192,7 @@ class PubMed(object):
         for book in root.iter("PubmedBookArticle"):
             yield PubMedBookArticle(xml_element=book)
 
-    def _getArticlesSummaries(self, article_ids: list[str]):
+    def _get_articles_summaries(self, article_ids: list[str]):
         """ Helper method to retrieve the article summaries for an ids list.
 
             Parameters:
@@ -210,7 +218,7 @@ class PubMed(object):
 
 
 
-    def _getArticleIds(self, query: str, max_results: int) -> list[str]:
+    def _get_article_ids(self, query: str, max_results: int) -> list[str]:
         """ Helper method to retrieve the article IDs for a query.
 
             Parameters:
@@ -272,3 +280,30 @@ class PubMed(object):
 
         # Return the response
         return article_ids
+
+    def get_article_download_url(self, article_id: str):
+        if self.parameters["db"] != "pmc":
+            raise Exception(f"Can't download Pubmed Documents from {self.parameters["db"]} database!\n list of available databases: ['pmc']")
+        
+        parameters = self.parameters.copy()
+        parameters["id"] = article_id
+
+        res = self._get("/pmc/utils/oa/oa.fcgi", parameters=parameters, output="xml")
+        root = extract_xml(res)
+        if root is None: return None
+
+        err = root.find("error")
+        if not (err is None): return None
+        
+        record = root.find(".//record")
+
+        pdf_link = record.find(".//link[@format='pdf']")
+        if pdf_link is not None:
+            return pdf_link.attrib['href']
+        
+        tgz_link = record.find(".//link[@format='tgz']")
+        if tgz_link is not None:
+            return tgz_link.attrib['href']
+        
+        return None
+
