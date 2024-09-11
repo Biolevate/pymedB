@@ -80,7 +80,7 @@ def _parse_xml(xml_string: str):
 
     # Iterate over each DocSum element and create ArticleSummary object using from_xml class method
     for docsum in root.findall('DocSum'):
-        doc = DocSum.from_xml(docsum)
+        doc = ArticleSummary.from_xml(docsum)
         docs.append(doc)
 
     return docs

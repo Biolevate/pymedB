@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "pymedb"
+version = "0.1.0"
+description = "Python library for access to PubMed"
+authors = ["Gijs Wobben <gijswobben@gmail.com>", "Lev Kuzan <levko.kuzan@gmail.com>"]
+license = "MIT"
+keywords = ["PubMed", "PMC"]
+homepage = "https://github.com/Biolevate/pymedB"
+readme = "README.md"
+classifiers=[
+    "Topic :: Utilities",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3 :: Only",
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+requests = "^2.32.3"
+gitpython = "^3.1.43"
+twine = "^5.1.1"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
