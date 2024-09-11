@@ -1,7 +1,6 @@
-from typing import TypeVar
+from xml.etree.ElementTree import Element
 
-
-def batches(iterable: list, n: int = 1) -> list:
+def batches(iterable: list, n: int = 1):
     """ Helper method that creates batches from an iterable.
 
         Parameters:
@@ -22,8 +21,8 @@ def batches(iterable: list, n: int = 1) -> list:
         yield iterable[index : min(index + n, length)]
 
 
-def getContent(
-    element: TypeVar("Element"), path: str, default: str = None, separator: str = "\n"
+def get_content(
+    element: Element, path: str, default: str = None, separator: str = "\n"
 ) -> str:
     """ Internal helper method that retrieves the text content of an
         XML element.

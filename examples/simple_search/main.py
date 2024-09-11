@@ -20,4 +20,4 @@ for article in results:
     print(type(article))
 
     # Print a JSON representation of the object
-    print(article.toJSON())
+    print(article.to_json())

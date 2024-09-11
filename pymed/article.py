@@ -2,13 +2,13 @@ import json
 import datetime
 
 from xml.etree.ElementTree import Element
-from typing import TypeVar
 from typing import Optional
 
-from .helpers import getContent
+from .helpers import get_content
 
 
-class PubMedArticle(object):
+
+class PubMedArticle:
     """ Data class that contains a PubMed article.
     """
 
@@ -29,8 +29,8 @@ class PubMedArticle(object):
     )
 
     def __init__(
-        self: object,
-        xml_element: Optional[TypeVar("Element")] = None,
+        self,
+        xml_element: Optional[Element] = None,
         *args: list,
         **kwargs: dict,
     ) -> None:
@@ -46,59 +46,59 @@ class PubMedArticle(object):
             for field in self.__slots__:
                 self.__setattr__(field, kwargs.get(field, None))
 
-    def _extractPubMedId(self: object, xml_element: TypeVar("Element")) -> str:
+    def _extract_pubmed_id(self, xml_element: Element) -> str:
         path = ".//ArticleId[@IdType='pubmed']"
-        return getContent(element=xml_element, path=path)
+        return get_content(element=xml_element, path=path)
 
-    def _extractTitle(self: object, xml_element: TypeVar("Element")) -> str:
+    def _extract_title(self, xml_element: Element) -> str:
         path = ".//ArticleTitle"
-        return getContent(element=xml_element, path=path)
+        return get_content(element=xml_element, path=path)
 
-    def _extractKeywords(self: object, xml_element: TypeVar("Element")) -> str:
+    def _extract_keywords(self, xml_element: Element) -> str:
         path = ".//Keyword"
         return [
             keyword.text for keyword in xml_element.findall(path) if keyword is not None
         ]
 
-    def _extractJournal(self: object, xml_element: TypeVar("Element")) -> str:
+    def _extract_journal(self, xml_element: Element) -> str:
         path = ".//Journal/Title"
-        return getContent(element=xml_element, path=path)
+        return get_content(element=xml_element, path=path)
 
-    def _extractAbstract(self: object, xml_element: TypeVar("Element")) -> str:
+    def _extract_abstract(self, xml_element: Element) -> str:
         path = ".//AbstractText"
-        return getContent(element=xml_element, path=path)
+        return get_content(element=xml_element, path=path)
 
-    def _extractConclusions(self: object, xml_element: TypeVar("Element")) -> str:
+    def _extract_conclusions(self, xml_element: Element) -> str:
         path = ".//AbstractText[@Label='CONCLUSION']"
-        return getContent(element=xml_element, path=path)
+        return get_content(element=xml_element, path=path)
 
-    def _extractMethods(self: object, xml_element: TypeVar("Element")) -> str:
+    def _extract_methods(self, xml_element: Element) -> str:
         path = ".//AbstractText[@Label='METHOD']"
-        return getContent(element=xml_element, path=path)
+        return get_content(element=xml_element, path=path)
 
-    def _extractResults(self: object, xml_element: TypeVar("Element")) -> str:
+    def _extract_results(self, xml_element: Element) -> str:
         path = ".//AbstractText[@Label='RESULTS']"
-        return getContent(element=xml_element, path=path)
+        return get_content(element=xml_element, path=path)
 
-    def _extractCopyrights(self: object, xml_element: TypeVar("Element")) -> str:
+    def _extract_copyrights(self, xml_element: Element) -> str:
         path = ".//CopyrightInformation"
-        return getContent(element=xml_element, path=path)
+        return get_content(element=xml_element, path=path)
 
-    def _extractDoi(self: object, xml_element: TypeVar("Element")) -> str:
+    def _extract_doi(self, xml_element: Element) -> str:
         path = ".//ArticleId[@IdType='doi']"
-        return getContent(element=xml_element, path=path)
+        return get_content(element=xml_element, path=path)
 
-    def _extractPublicationDate(
-        self: object, xml_element: TypeVar("Element")
-    ) -> TypeVar("datetime.datetime"):
+    def _extract_publication_date(
+        self, xml_element: Element
+    ) -> datetime.datetime:
         # Get the publication date
         try:
 
             # Get the publication elements
             publication_date = xml_element.find(".//PubMedPubDate[@PubStatus='pubmed']")
-            publication_year = int(getContent(publication_date, ".//Year", None))
-            publication_month = int(getContent(publication_date, ".//Month", "1"))
-            publication_day = int(getContent(publication_date, ".//Day", "1"))
+            publication_year = int(get_content(publication_date, ".//Year", None))
+            publication_month = int(get_content(publication_date, ".//Month", "1"))
+            publication_day = int(get_content(publication_date, ".//Day", "1"))
 
             # Construct a datetime object from the info
             return datetime.date(
@@ -110,43 +110,43 @@ class PubMedArticle(object):
             print(e)
             return None
 
-    def _extractAuthors(self: object, xml_element: TypeVar("Element")) -> list:
+    def _extract_authors(self, xml_element: Element) -> list:
         return [
             {
-                "lastname": getContent(author, ".//LastName", None),
-                "firstname": getContent(author, ".//ForeName", None),
-                "initials": getContent(author, ".//Initials", None),
-                "affiliation": getContent(author, ".//AffiliationInfo/Affiliation", None),
+                "lastname": get_content(author, ".//LastName", None),
+                "firstname": get_content(author, ".//ForeName", None),
+                "initials": get_content(author, ".//Initials", None),
+                "affiliation": get_content(author, ".//AffiliationInfo/Affiliation", None),
             }
             for author in xml_element.findall(".//Author")
         ]
 
-    def _initializeFromXML(self: object, xml_element: TypeVar("Element")) -> None:
+    def _initializeFromXML(self, xml_element: Element) -> None:
         """ Helper method that parses an XML element into an article object.
         """
 
         # Parse the different fields of the article
-        self.pubmed_id = self._extractPubMedId(xml_element)
-        self.title = self._extractTitle(xml_element)
-        self.keywords = self._extractKeywords(xml_element)
-        self.journal = self._extractJournal(xml_element)
-        self.abstract = self._extractAbstract(xml_element)
-        self.conclusions = self._extractConclusions(xml_element)
-        self.methods = self._extractMethods(xml_element)
-        self.results = self._extractResults(xml_element)
-        self.copyrights = self._extractCopyrights(xml_element)
-        self.doi = self._extractDoi(xml_element)
-        self.publication_date = self._extractPublicationDate(xml_element)
-        self.authors = self._extractAuthors(xml_element)
+        self.pubmed_id = self._extract_pubmed_id(xml_element)
+        self.title = self._extract_title(xml_element)
+        self.keywords = self._extract_keywords(xml_element)
+        self.journal = self._extract_journal(xml_element)
+        self.abstract = self._extract_abstract(xml_element)
+        self.conclusions = self._extract_conclusions(xml_element)
+        self.methods = self._extract_methods(xml_element)
+        self.results = self._extract_results(xml_element)
+        self.copyrights = self._extract_copyrights(xml_element)
+        self.doi = self._extract_doi(xml_element)
+        self.publication_date = self._extract_publication_date(xml_element)
+        self.authors = self._extract_authors(xml_element)
         self.xml = xml_element
 
-    def toDict(self: object) -> dict:
+    def toDict(self) -> dict:
         """ Helper method to convert the parsed information to a Python dict.
         """
 
         return {key: self.__getattribute__(key) for key in self.__slots__}
 
-    def toJSON(self: object) -> str:
+    def toJSON(self) -> str:
         """ Helper method for debugging, dumps the object as JSON string.
         """
 
