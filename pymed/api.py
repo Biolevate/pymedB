@@ -72,12 +72,12 @@ class PubMed(object):
         """
 
         # Retrieve the article IDs for the query
-        article_ids = self._get_article_ids(query=query, max_results=max_results)
+        article_ids = self.get_article_ids(query=query, max_results=max_results)
 
         # Get the articles themselves
         articles = list(
             [
-                self._get_articles(article_ids=batch)
+                self.get_articles(article_ids=batch)
                 for batch in batches(article_ids, 250)
             ]
         )
@@ -164,7 +164,7 @@ class PubMed(object):
         else:
             return response.text
 
-    def _get_articles(self, article_ids: list):
+    def get_articles(self, article_ids: list):
         """ Helper method that batches a list of article IDs and retrieves the content.
 
             Parameters:
@@ -218,7 +218,7 @@ class PubMed(object):
 
 
 
-    def _get_article_ids(self, query: str, max_results: int) -> list[str]:
+    def get_article_ids(self, query: str, max_results: int) -> list[str]:
         """ Helper method to retrieve the article IDs for a query.
 
             Parameters:
@@ -281,7 +281,7 @@ class PubMed(object):
         # Return the response
         return article_ids
 
-    def get_article_download_url(self, article_id: str):
+    def get_article_download_url(self, article_id: str, accepted_formats: list[str] = ['pdf', 'tgz']):
         if self.parameters["db"] != "pmc":
             raise Exception(f"Can't download Pubmed Documents from {self.parameters["db"]} database!\n list of available databases: ['pmc']")
         
@@ -297,13 +297,10 @@ class PubMed(object):
         
         record = root.find(".//record")
 
-        pdf_link = record.find(".//link[@format='pdf']")
-        if pdf_link is not None:
-            return pdf_link.attrib['href']
-        
-        tgz_link = record.find(".//link[@format='tgz']")
-        if tgz_link is not None:
-            return tgz_link.attrib['href']
+        for accepted_format in accepted_formats:
+            link = record.find(f".//link[@format='{accepted_format}']")
+            if link is not None:
+                return link.attrib['href']
         
         return None
 
