@@ -192,7 +192,7 @@ class PubMed(object):
         for book in root.iter("PubmedBookArticle"):
             yield PubMedBookArticle(xml_element=book)
 
-    def _get_articles_summaries(self, article_ids: list[str]):
+    def get_articles_summaries(self, article_ids: list[str]):
         """ Helper method to retrieve the article summaries for an ids list.
 
             Parameters:
