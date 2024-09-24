@@ -1,4 +1,4 @@
-from pymed import PubMed
+from pymedb import PubMed
 
 
 # Create a PubMed object that GraphQL can use to query

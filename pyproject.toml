@@ -4,6 +4,9 @@ version = "0.9.0"
 
 description = "Python library for access to PubMed"
 authors = ["Gijs Wobben <gijswobben@gmail.com>", "Lev Kuzan <levko.kuzan@gmail.com>"]
+packages = [
+    { include = "pymedb", from="." },
+]
 license = "MIT"
 keywords = ["PubMed", "PMC"]
 homepage = "https://github.com/Biolevate/pymedB"
