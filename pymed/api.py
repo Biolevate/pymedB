@@ -4,15 +4,23 @@ import itertools
 
 import xml.etree.ElementTree as xml
 
-from typing import Union
+from typing import Union, Optional
 
 from .helpers import batches
 from .article import PubMedArticle
 from .book import PubMedBookArticle
-
+from .summary import ArticleSummary
 
 # Base url for all queries
 BASE_URL = "https://eutils.ncbi.nlm.nih.gov"
+# /pmc/utils/oa/oa.fcgi
+
+def extract_xml(data: str):
+  try:
+    return xml.fromstring(data)
+  except Exception:
+    return None
+  
 
 
 class PubMed(object):
@@ -20,7 +28,11 @@ class PubMed(object):
     """
 
     def __init__(
-        self: object, tool: str = "my_tool", email: str = "my_email@example.com"
+        self,
+        tool: str = "my_tool",
+        email: str = "my_email@example.com",
+        db: str = "pubmed",
+        api_key: Optional[str] = None
     ) -> None:
         """ Initialization of the object.
 
@@ -44,9 +56,10 @@ class PubMed(object):
         self._requestsMade = []
 
         # Define the standard / default query parameters
-        self.parameters = {"tool": tool, "email": email, "db": "pubmed"}
+        self.parameters = {"tool": tool, "email": email, "db": db}
+        if not api_key is None: self.parameters['api_key'] = api_key
 
-    def query(self: object, query: str, max_results: int = 100):
+    def query(self, query: str, max_results: int = 100):
         """ Method that executes a query agains the GraphQL schema, automatically
             inserting the PubMed data loader.
 
@@ -59,12 +72,12 @@ class PubMed(object):
         """
 
         # Retrieve the article IDs for the query
-        article_ids = self._getArticleIds(query=query, max_results=max_results)
+        article_ids = self.get_article_ids(query=query, max_results=max_results)
 
         # Get the articles themselves
         articles = list(
             [
-                self._getArticles(article_ids=batch)
+                self.get_articles(article_ids=batch)
                 for batch in batches(article_ids, 250)
             ]
         )
@@ -72,7 +85,7 @@ class PubMed(object):
         # Chain the batches back together and return the list
         return itertools.chain.from_iterable(articles)
 
-    def getTotalResultsCount(self: object, query: str) -> int:
+    def get_total_results_count(self, query: str) -> int:
         """ Helper method that returns the total number of results that match the query.
 
             Parameters:
@@ -98,7 +111,7 @@ class PubMed(object):
         # Return the total number of results (without retrieving them)
         return total_results_count
     
-    def _exceededRateLimit(self) -> bool:
+    def _exceeded_rate_limit(self) -> bool:
         """ Helper method to check if we've exceeded the rate limit.
 
             Returns:
@@ -112,7 +125,7 @@ class PubMed(object):
         return len(self._requestsMade) > self._rateLimit
 
     def _get(
-        self: object, url: str, parameters: dict, output: str = "json"
+        self, url: str, parameters: dict, output: str = "json"
     ) -> Union[dict, str]:
         """ Generic helper method that makes a request to PubMed.
 
@@ -130,7 +143,7 @@ class PubMed(object):
         """
 
         # Make sure the rate limit is not exceeded
-        while self._exceededRateLimit():
+        while self._exceeded_rate_limit():
             pass
 
         # Set the response mode
@@ -151,7 +164,7 @@ class PubMed(object):
         else:
             return response.text
 
-    def _getArticles(self: object, article_ids: list) -> list:
+    def get_articles(self, article_ids: list):
         """ Helper method that batches a list of article IDs and retrieves the content.
 
             Parameters:
@@ -179,7 +192,33 @@ class PubMed(object):
         for book in root.iter("PubmedBookArticle"):
             yield PubMedBookArticle(xml_element=book)
 
-    def _getArticleIds(self: object, query: str, max_results: int) -> list:
+    def get_articles_summaries(self, article_ids: list[str]):
+        """ Helper method to retrieve the article summaries for an ids list.
+
+            Parameters:
+                - article_ids                 List[Str], list of article ids.
+
+            Returns:
+                - articles_summaries   List[ArticleSummary], list of article summaries.
+        """
+
+        # Get the default parameters
+        parameters = self.parameters.copy()
+        parameters["id"] = article_ids
+
+        # Make the request
+        response = self._get(
+            url="/entrez/eutils/esummary.fcgi", parameters=parameters, output="xml"
+        )
+
+        root = xml.fromstring(response)
+        
+        for docsum in root.findall('DocSum'):
+            yield ArticleSummary.from_xml(docsum=docsum)
+
+
+
+    def get_article_ids(self, query: str, max_results: int) -> list[str]:
         """ Helper method to retrieve the article IDs for a query.
 
             Parameters:
@@ -241,3 +280,27 @@ class PubMed(object):
 
         # Return the response
         return article_ids
+
+    def get_article_download_url(self, article_id: str, accepted_formats: list[str] = ['pdf', 'tgz']):
+        if self.parameters["db"] != "pmc":
+            raise Exception(f"Can't download Pubmed Documents from {self.parameters["db"]} database!\n list of available databases: ['pmc']")
+        
+        parameters = self.parameters.copy()
+        parameters["id"] = article_id
+
+        res = self._get("/pmc/utils/oa/oa.fcgi", parameters=parameters, output="xml")
+        root = extract_xml(res)
+        if root is None: return None
+
+        err = root.find("error")
+        if not (err is None): return None
+        
+        record = root.find(".//record")
+
+        for accepted_format in accepted_formats:
+            link = record.find(f".//link[@format='{accepted_format}']")
+            if link is not None:
+                return link.attrib['href']
+        
+        return None
+
