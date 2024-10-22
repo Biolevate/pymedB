@@ -1,7 +1,7 @@
 # mypy: disable-error-code="attr-defined"
 """PyMedB package."""
 from importlib import metadata as importlib_metadata
-from .api import PubMed
+from .api import PubMed, PMC
 def get_version():
     """Return the program version."""
     try:
