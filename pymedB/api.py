@@ -70,7 +70,8 @@ class PubMed(object):
                 - result    ExecutionResult, GraphQL object that contains the result
                             in the "data" attribute.
         """
-
+        if (self.parameters['db'] != 'pubmed'):
+            raise Exception(f"can query only 'pubmed' database, your database: {self.parameters['db']}")
         # Retrieve the article IDs for the query
         article_ids = self.get_article_ids(query=query, max_results=max_results)
 
@@ -174,6 +175,8 @@ class PubMed(object):
                 - articles      List, article objects.
         """
 
+        if (self.parameters['db'] != 'pubmed'):
+            raise Exception(f"can get articles of only 'pubmed' database, your database: {self.parameters['db']}")
         # Get the default parameters
         parameters = self.parameters.copy()
         parameters["id"] = article_ids
@@ -303,4 +306,18 @@ class PubMed(object):
                 return link.attrib['href']
         
         return None
+
+    def query_article_download_urls(self, query: str, max_results: int = 100, accepted_formats: list[str] = ['pdf', 'tgz']):
+        if self.parameters["db"] != "pmc":
+            raise Exception(
+                f"Can't download Pubmed Documents from {self.parameters["db"]} database!\n list of available databases: ['pmc']"
+            )
+        
+        articles_ids = self.get_article_ids(
+            query=query,
+            max_results=max_results
+        )
+
+        return [self.get_article_download_url(article_id=article_id, accepted_formats=accepted_formats) for article_id in articles_ids]
+
 
