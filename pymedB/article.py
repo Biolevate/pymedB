@@ -146,7 +146,7 @@ class PubMedArticle:
 
         return {key: self.__getattribute__(key) for key in self.__slots__}
 
-    def toJSON(self) -> str:
+    def to_json(self) -> str:
         """ Helper method for debugging, dumps the object as JSON string.
         """
 
